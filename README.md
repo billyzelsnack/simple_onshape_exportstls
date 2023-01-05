@@ -25,7 +25,6 @@ A minimal implementation of an onshape STL exporter written in c++. It supports 
 * Copy the "OAuth client identifier" and add it to your environment variables as "ONSHAPE_CLIENT_ID"
 
 # Installation
-
 * Install https://github.com/microsoft/vcpkg wherever like. For simplicity this project assumes C:\vcpkg
 * vcpkg install cpp-httplib:x64-windows
 * vcpkg install cppcodec:x64-windows
@@ -35,9 +34,11 @@ A minimal implementation of an onshape STL exporter written in c++. It supports 
 * Set the active build to Release.
 * If needed update "C/C++ -> General -> Additional Include Directories" to match your vcpkg installation.
 * If needed update "Linker -> Input -> Additional Library Directories" to match your vcpkg installation.
-* If needed update the curlpp.dll, libcurl.dll, and zlib1.dll entries so Visual Studio can find and copy them.
 * If you are using onshape API keys for authorization then add ONSHAPE_ACCESS_KEY and ONSHAPE_SECRET_KEY to your environment variables.
 * If you are using onshape OAuth for authorization then add ONSHAPE_CLIENT_ID to your environment variables.
 * Restart Visual Studio.
 * Open main.cpp and in main() choose one of the two authorization options.
-* Hit F5 and it should export stls from a hardcoded onshape partstudio document url.
+* Build the project
+* After the build a out/vs2022/x64/Release directory with be created. From your vcpkg/installed/x64-windows/bin directory copy curlpp.dll, libcurl.dll, and zlib1.dll into it
+* Run the exe or hit F5 and the exported stls will be saved to out/vs2022/x64/Release
+

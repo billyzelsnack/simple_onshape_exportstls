@@ -16,6 +16,12 @@
 using json_t = nlohmann::json;
 
 
+//-- ********
+//-- *      *
+//-- * http *
+//-- *      *
+//-- ********
+
 std::string http_request(const std::string& authorization, const std::string& url, const std::string& accept, std::string& out_redirectUrl)
 {
     out_redirectUrl.clear();
@@ -64,8 +70,87 @@ std::string http_request_octet(const std::string& authorization, const std::stri
 }
 
 
+//-- *****************
+//-- *               *
+//-- * authorization *
+//-- *               *
+//-- *****************
+
+std::string onshape_apikeys_getauthorization(const std::string& access_key, const std::string& secret_key)
+{
+    return "Basic " + base64::encode(access_key + ":" + secret_key);
+}
+
+//-- todo: this needs a timeout so it does not potentially block forever
+std::string onshape_oauth_getauthorization(const std::string& client_id)
+{
+    std::string eclient_id = curlpp::escape(client_id);
+    const uint16_t localhostPort = 8293;
+
+    std::string url = "https://oauth.onshape.com/oauth/authorize?response_type=code&client_id=" + eclient_id;
+    url += "&redirect_uri=http://localhost:" + std::to_string(localhostPort);
+    ShellExecute(NULL, L"open", std::wstring(url.begin(), url.end()).c_str(), NULL, NULL, SW_SHOWNORMAL);
+
+    std::string code;
+    httplib::Server svr;
+    svr.Get("/", [&](const httplib::Request& req, httplib::Response& res)
+        {
+            res.set_content("You can close this window or tab now.", "text/plain");
+    code = req.get_param_value("code");
+    svr.stop();
+        });
+    svr.listen("localhost", localhostPort);
+
+    if (code.empty()) { return ""; }
+    printf("code [%s]\n", code.c_str());
+
+    std::string bearer;
+    try
+    {
+        curlpp::Cleanup cleaner;
+        curlpp::Easy request;
+        std::stringstream stream;
+
+        std::list<std::string> header;
+        header.push_back("Content-Type: application/x-www-form-urlencoded");
+        request.setOpt(curlpp::options::HttpHeader(header));
+
+        request.setOpt(curlpp::options::Url("https://oauth.onshape.com/oauth/token"));
+        request.setOpt(curlpp::options::Verbose(false));
+        request.setOpt(curlpp::options::WriteStream(&stream));
+
+        std::string ecode = curlpp::escape(code);// "JoJUeTKTjBUvjoXAqdEauHsv");
+        std::string eclient_secret = curlpp::escape("MBIFJA2JOYP2FN2J2AP7AQXJVVVPPVRKUODCM2DSMNUQUH7XM6QQ====");
+        std::string body = "grant_type=authorization_code&code=" + ecode + "&client_id=" + eclient_id + "&client_secret=" + eclient_secret;
+        body += "&redirect_uri=http://localhost:" + std::to_string(localhostPort);
+        request.setOpt(new curlpp::options::PostFields(body));
+        request.setOpt(new curlpp::options::PostFieldSize((long)body.length()));
+
+        request.perform();
+
+        json_t json = json_t::parse(stream.str());
+        bearer = json.at("access_token");
+    }
+    catch (curlpp::LogicError& e)
+    {
+        std::cout << e.what() << std::endl;
+    }
+    catch (curlpp::RuntimeError& e)
+    {
+        std::cout << e.what() << std::endl;
+    }
+    if (bearer.empty()) { return ""; }
+
+    printf("bearer [%s]\n", bearer.c_str());
+    return "Bearer " + bearer;
+}
 
 
+//-- **********
+//-- *        *
+//-- * export *
+//-- *        *
+//-- **********
 
 void onshape_exportstls(const std::string& authorization, const std::string& urldocument, const std::string& units, double angleTolerance, double chordTolerance)
 {
@@ -109,76 +194,6 @@ void onshape_exportstls(const std::string& authorization, const std::string& url
 
 }
 
-
-
-std::string onshape_apikeys_getauthorization(const std::string& access_key, const std::string& secret_key)
-{
-    return "Basic " + base64::encode(access_key + ":" + secret_key);
-}
-
-//-- todo: this needs a timeout so it does not potentially block forever
-std::string onshape_oauth_getauthorization(const std::string& client_id)
-{
-    std::string eclient_id = curlpp::escape(client_id);
-    const uint16_t localhostPort = 8293;
-
-    std::string url = "https://oauth.onshape.com/oauth/authorize?response_type=code&client_id=" + eclient_id;
-    url += "&redirect_uri=http://localhost:" + std::to_string(localhostPort);
-    ShellExecute(NULL, L"open", std::wstring(url.begin(), url.end()).c_str(), NULL, NULL, SW_SHOWNORMAL);
-    
-    std::string code;
-    httplib::Server svr;
-    svr.Get("/", [&](const httplib::Request& req, httplib::Response& res)
-    {
-        res.set_content("You can close this window or tab now.", "text/plain");
-        code = req.get_param_value("code");
-        svr.stop();
-    });
-    svr.listen("localhost", localhostPort); 
-
-    if (code.empty()) { return ""; }
-    printf("code [%s]\n", code.c_str());
-
-    std::string bearer;
-    try
-    {
-        curlpp::Cleanup cleaner;
-        curlpp::Easy request;
-        std::stringstream stream;
-
-        std::list<std::string> header;
-        header.push_back("Content-Type: application/x-www-form-urlencoded");
-        request.setOpt(curlpp::options::HttpHeader(header));
-
-        request.setOpt(curlpp::options::Url("https://oauth.onshape.com/oauth/token"));
-        request.setOpt(curlpp::options::Verbose(false));
-        request.setOpt(curlpp::options::WriteStream(&stream));
-
-        std::string ecode = curlpp::escape(code);// "JoJUeTKTjBUvjoXAqdEauHsv");
-        std::string eclient_secret = curlpp::escape("MBIFJA2JOYP2FN2J2AP7AQXJVVVPPVRKUODCM2DSMNUQUH7XM6QQ====");
-        std::string body = "grant_type=authorization_code&code=" + ecode + "&client_id=" + eclient_id + "&client_secret=" + eclient_secret;
-        body += "&redirect_uri=http://localhost:" + std::to_string(localhostPort);
-        request.setOpt(new curlpp::options::PostFields(body));
-        request.setOpt(new curlpp::options::PostFieldSize((long)body.length()));
-
-        request.perform();
-
-        json_t json=json_t::parse(stream.str());
-        bearer=json.at("access_token");
-    }
-    catch (curlpp::LogicError& e)
-    {
-        std::cout << e.what() << std::endl;
-    }
-    catch (curlpp::RuntimeError& e)
-    {
-        std::cout << e.what() << std::endl;
-    }
-    if(bearer.empty()){ return ""; }
-
-    printf("bearer [%s]\n", bearer.c_str());    
-    return "Bearer "+bearer;
-}
 
 int main(int argc, char* argv[])
 {
