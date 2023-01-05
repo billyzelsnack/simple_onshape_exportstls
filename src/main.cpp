@@ -16,7 +16,7 @@
 using json_t = nlohmann::json;
 
 
-std::string request(const std::string& authorization, const std::string& url, const std::string& accept, std::string& out_redirectUrl)
+std::string http_request(const std::string& authorization, const std::string& url, const std::string& accept, std::string& out_redirectUrl)
 {
     out_redirectUrl.clear();
 
@@ -51,16 +51,16 @@ std::string request(const std::string& authorization, const std::string& url, co
     return stream.str();
 }
 
-json_t request_json(const std::string authorization, const std::string& url, std::string& out_redirectUrl)
+json_t http_request_json(const std::string authorization, const std::string& url, std::string& out_redirectUrl)
 {
-    std::string result = request(authorization, url, "application/json;charset=UTF-8;qs=0.09", out_redirectUrl);
+    std::string result = http_request(authorization, url, "application/json;charset=UTF-8;qs=0.09", out_redirectUrl);
     if (result.empty()) { return json_t(); }
     return json_t::parse(result);
 }
 
-std::string request_octet(const std::string& authorization, const std::string& url, std::string& out_redirectUrl)
+std::string http_request_octet(const std::string& authorization, const std::string& url, std::string& out_redirectUrl)
 {
-    return request(authorization, url, "application/octet-stream", out_redirectUrl);
+    return http_request(authorization, url, "application/octet-stream", out_redirectUrl);
 }
 
 
@@ -75,7 +75,7 @@ void onshape_exportstls(const std::string& authorization, const std::string& url
 
     std::string url = urlbase + "?withThumbnails=true&includePropertyDefaults=true";
     std::string redirectUrl;
-    json_t parts = request_json(authorization, url, redirectUrl);
+    json_t parts = http_request_json(authorization, url, redirectUrl);
     for (auto& part : parts)
     {
         if (part.at("bodyType") == "solid")
@@ -91,11 +91,11 @@ void onshape_exportstls(const std::string& authorization, const std::string& url
             url+="&angleTolerance="+std::to_string(angleTolerance);
             url+="&chordTolerance="+std::to_string(chordTolerance);
             std::string redirectUrl;
-            request_json(authorization, url, redirectUrl);
+            http_request_json(authorization, url, redirectUrl);
             if (redirectUrl.empty() == false)
             {
                 url = redirectUrl;
-                std::string stl = request_octet(authorization, url, redirectUrl);
+                std::string stl = http_request_octet(authorization, url, redirectUrl);
                 if (stl.empty() == false)
                 {
                     printf("%s.stl [%zd]\n", name.c_str(), stl.length());
@@ -187,12 +187,14 @@ int main(int argc, char* argv[])
     double angleTolerance = 0.5236;
     double chordTolerance = 0.05;
 
+    //-- API keys authorization (Option A)
     std::string client_id= getenv("ONSHAPE_CLIENT_ID");
     std::string authorization=onshape_oauth_getauthorization(client_id);
 
-    //std::string access_key=getenv("ONSHAPE_ACCESS_KEY");
-    //std::string secret_key=getenv("ONSHAPE_SECRET_KEY");
-    //std::string authorization = onshape_apikeys_getauthorization(access_key, secret_key);
+    //-- API keys authorization (Option B)
+    //-- std::string access_key=getenv("ONSHAPE_ACCESS_KEY");
+    //-- std::string secret_key=getenv("ONSHAPE_SECRET_KEY");
+    //-- std::string authorization = onshape_apikeys_getauthorization(access_key, secret_key);
 
     onshape_exportstls(authorization, urldocument, "millimeter", angleTolerance, chordTolerance );
 
