@@ -203,15 +203,15 @@ int main(int argc, char* argv[])
     double chordTolerance = 0.05;
 
     //-- API keys authorization (Option A)
-    std::string client_id= getenv("ONSHAPE_CLIENT_ID");
-    std::string authorization=onshape_oauth_getauthorization(client_id);
+    //std::string client_id= getenv("ONSHAPE_CLIENT_ID");
+    //std::string authorization=onshape_oauth_getauthorization(client_id);
 
     //-- API keys authorization (Option B)
-    //-- std::string access_key=getenv("ONSHAPE_ACCESS_KEY");
-    //-- std::string secret_key=getenv("ONSHAPE_SECRET_KEY");
-    //-- std::string authorization = onshape_apikeys_getauthorization(access_key, secret_key);
+    std::string access_key=getenv("ONSHAPE_ACCESS_KEY");
+    std::string secret_key=getenv("ONSHAPE_SECRET_KEY");
+    std::string authorization = onshape_apikeys_getauthorization(access_key, secret_key);
 
-    onshape_exportstls(authorization, urldocument, "millimeter", angleTolerance, chordTolerance );
+    onshape_exportstls(authorization, urldocument, units, angleTolerance, chordTolerance );
 
     return EXIT_SUCCESS;
 }

@@ -25,17 +25,16 @@ A minimal implementation of an onshape STL exporter written in c++. It supports 
 * Copy the "OAuth client identifier" and add it to your environment variables as "ONSHAPE_CLIENT_ID"
 
 # Installation
+* Install https://premake.github.io/
 * Install https://github.com/microsoft/vcpkg wherever you like. For simplicity this project assumes C:\vcpkg
 * vcpkg install cpp-httplib:x64-windows
 * vcpkg install cppcodec:x64-windows
 * vcpkg install curlpp:x64-windows
 * vcpkg install nlohmann-json:x64-windows
+* Changed the vckgdir variable at the top of premake5.lua to match your vcpkg directory.
+* premake5 vs2022
 * Open prj/vs2022/simple_onshape_exportstls.sln in Visual Studio 2022
 * Set the active build to Release.
-* If needed update "C/C++ -> General -> Additional Include Directories" to match your vcpkg installation.
-* If needed update "Linker -> Input -> Additional Library Directories" to match your vcpkg installation.
 * Open main.cpp and in main() choose one of the two authorization options.
-* Build the project
-* After the build a out/vs2022/x64/Release directory with be created. From your vcpkg/installed/x64-windows/bin directory copy curlpp.dll, libcurl.dll, and zlib1.dll into it
-* Run the exe or hit F5 and the exported stls will be saved to out/vs2022/x64/Release
+* F5 to build and run. The exported stls will be saved to out/vs2022/x64/Release
 
