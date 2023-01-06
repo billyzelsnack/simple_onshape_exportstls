@@ -37,5 +37,5 @@ A minimal implementation of an onshape STL exporter written in c++. It supports 
 * In the directory where premake5.lua is located run: premake5 vs2022
 * Open vs2022/simple_onshape_exportstls.sln in Visual Studio 2022
 * Open main.cpp and in the main() choose one of the two authorization options.
-* F5 to build and run. The exported stls will be saved to either vs2022/Debug/out_x64 or vs2022/Release/out_x64
+* F5 to build and run. The exported stls and zip will be saved to either vs2022/Debug/out_x64 or vs2022/Release/out_x64
 

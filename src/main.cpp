@@ -171,7 +171,25 @@ std::vector<std::pair<std::string, std::string>> onshape_listsolids(const std::s
     return solids;
 }
 
-void onshape_exportstls(const std::string& authorization, const std::string& urldocument, bool binarymode, const std::string& units, double angleTolerance, double chordTolerance)
+
+bool onshape_export( const std::string& authorization, const std::string redirectUrl, bool binarymode, const std::string outputfilename )
+{
+    //printf("[%s]\n", redirectUrl.c_str());
+    std::string anotherRedirectUrl;
+    std::string stl = http_request_octet(authorization, redirectUrl, anotherRedirectUrl, false);
+    if (stl.empty()) { return false; }
+  
+    printf("%s [%zd]\n", outputfilename.c_str(), stl.length());
+    auto mode = std::ios_base::out;
+    if (binarymode) { mode = std::ios::binary; }
+    std::ofstream outfile(outputfilename, mode);
+    outfile << stl;
+    outfile.close();
+    
+    return true;
+}
+
+void onshape_exportstls_individual(const std::string& authorization, const std::string& urldocument, bool binarymode, const std::string& units, double angleTolerance, double chordTolerance)
 {
     std::string urlbase = urldocument;
     urlbase.erase(0, std::string("https://cad.onshape.com/documents").length());
@@ -179,35 +197,59 @@ void onshape_exportstls(const std::string& authorization, const std::string& url
     
     std::vector<std::pair<std::string, std::string>> solids;
     solids=onshape_listsolids(authorization, urldocument, units, angleTolerance, chordTolerance);    
-    for (const auto& [name, partId] : solids)
+       
+    for(const auto& [name, partId] : solids)
     {
-        std::string url = urlbase + "/stl?partIds=" + partId;
+        bool zipped = false;
+        std::string url = urlbase + "/stl?partIds=" + curlpp::escape(partId);
         url += "&mode=" + std::string( binarymode?"binary":"text");
-        url += "&grouping=" + std::string( false?"true":"false" );
+        url += "&grouping=" + std::string( (!zipped)?"true":"false" );
         url += "&scale=" + std::to_string(1.0);
         url += "&units=" + units;
         url += "&angleTolerance=" + std::to_string(angleTolerance);
         url += "&chordTolerance=" + std::to_string(chordTolerance);
-        
+
         std::string redirectUrl;
         http_request_json(authorization, url, redirectUrl, false);
-        if (redirectUrl.empty() == false)
-        {
-            //printf("[%s]\n", redirectUrl.c_str());
-            url = redirectUrl;
-            std::string stl = http_request_octet(authorization, url, redirectUrl, false);
-            if (stl.empty() == false)
-            {
-                printf("%s.stl [%zd]\n", name.c_str(), stl.length());
-                auto mode = std::ios_base::out;
-                if (binarymode) { mode = std::ios::binary; }
-                std::ofstream outfile(name + ".stl", mode);
-                outfile << stl;
-                outfile.close();
-            }
-        }
+        if (redirectUrl.empty() == true) { continue; }
+
+        onshape_export( authorization, redirectUrl, binarymode, name+".stl" );
     }
 }
+
+void onshape_exportstls_combined(const std::string& authorization, const std::string& urldocument, bool binarymode, const std::string& units, double angleTolerance, double chordTolerance, bool zipped, const std::string outputfilename )
+{
+    std::string urlbase = urldocument;
+    urlbase.erase(0, std::string("https://cad.onshape.com/documents").length());
+    urlbase = "https://cad.onshape.com/api/v5/partstudios/d" + urlbase;
+
+    std::vector<std::pair<std::string, std::string>> solids;
+    solids = onshape_listsolids(authorization, urldocument, units, angleTolerance, chordTolerance);
+
+    std::string partIds;
+    for (const auto& [name, partId] : solids){ partIds += "," + partId; }
+    partIds.erase(0, 1);
+
+    std::string url = urlbase + "/stl?partIds=" + partIds;
+    url += "&mode=" + std::string(binarymode ? "binary" : "text");
+    url += "&grouping=" + std::string((!zipped) ? "true" : "false");
+    url += "&scale=" + std::to_string(1.0);
+    url += "&units=" + units;
+    url += "&angleTolerance=" + std::to_string(angleTolerance);
+    url += "&chordTolerance=" + std::to_string(chordTolerance);
+
+    std::string redirectUrl;
+    http_request_json(authorization, url, redirectUrl, false);
+    if (redirectUrl.empty() == false)
+    {
+        onshape_export(authorization, redirectUrl, true, outputfilename);
+    }
+}
+
+
+
+
+
 
 
 //--
@@ -216,12 +258,6 @@ void onshape_exportstls(const std::string& authorization, const std::string& url
 
 int main(int argc, char* argv[])
 {
-    std::string urldocument = "https://cad.onshape.com/documents/bd9401ba05b5d74bf12bb1a6/w/998c0499cee6d8fc96af5cbf/e/ecd24da899ea1976c376c6e7";
-    bool binarymode = false;
-    std::string units = "millimeter";
-    double angleTolerance = 0.5236;
-    double chordTolerance = 0.05;
-
     //-- API keys authorization (Option A)
     std::string access_key=getenv("ONSHAPE_ACCESS_KEY");
     std::string secret_key=getenv("ONSHAPE_SECRET_KEY");
@@ -231,7 +267,19 @@ int main(int argc, char* argv[])
     //std::string client_id= getenv("ONSHAPE_CLIENT_ID");
     //std::string authorization=onshape_oauth_getauthorization(client_id);
 
-    onshape_exportstls(authorization, urldocument, binarymode, units, angleTolerance, chordTolerance );
+    std::string urldocument = "https://cad.onshape.com/documents/bd9401ba05b5d74bf12bb1a6/w/998c0499cee6d8fc96af5cbf/e/ecd24da899ea1976c376c6e7";
+    bool binarymode = false;
+    std::string units = "millimeter";
+    double angleTolerance = 0.5236;
+    double chordTolerance = 0.05;
+
+    onshape_exportstls_individual(authorization, urldocument, binarymode, units, angleTolerance, chordTolerance );
+
+    std::string zipoutputfilename = "partstudio.zip";
+    onshape_exportstls_combined(authorization, urldocument, binarymode, units, angleTolerance, chordTolerance, true, zipoutputfilename );
+
+    std::string stloutputfilename = "partstudio.stl";
+    onshape_exportstls_combined(authorization, urldocument, binarymode, units, angleTolerance, chordTolerance, false, stloutputfilename);
 
     return EXIT_SUCCESS;
 }
