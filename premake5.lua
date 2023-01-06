@@ -20,7 +20,7 @@ workspace "simple_onshape_exportstls"
       libdirs { vcpkgdir.."installed/x64-windows/lib" }
 
       language "C++"
-      cpp_dialect "C++20"
+      cppdialect "C++20"
       defines {_CRT_SECURE_NO_WARNINGS}
       includedirs { vcpkgdir.."installed/x64-windows/include" }
       
