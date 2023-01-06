@@ -1,6 +1,6 @@
 
-#include <cstring>
 #include <cstdlib>
+#include <cstring>
 #include <fstream>
 #include <sstream>
 
@@ -16,13 +16,11 @@
 using json_t = nlohmann::json;
 
 
-//-- ********
-//-- *      *
-//-- * http *
-//-- *      *
-//-- ********
+//--
+//-- http
+//--
 
-std::string http_request(const std::string& authorization, const std::string& url, const std::string& accept, std::string& out_redirectUrl)
+std::string http_request(const std::string& authorization, const std::string& url, const std::string& accept, std::string& out_redirectUrl, bool verbose)
 {
     out_redirectUrl.clear();
 
@@ -37,7 +35,7 @@ std::string http_request(const std::string& authorization, const std::string& ur
         header.push_back("Authorization: " + authorization);
         request.setOpt(curlpp::options::HttpHeader(header));
         request.setOpt(curlpp::options::Url(url));
-        request.setOpt(curlpp::options::Verbose(false));
+        request.setOpt(curlpp::options::Verbose(verbose));
         request.setOpt(curlpp::options::WriteStream(&stream));
         request.setOpt(curlpp::options::FollowLocation(false));
         request.perform();
@@ -57,24 +55,22 @@ std::string http_request(const std::string& authorization, const std::string& ur
     return stream.str();
 }
 
-json_t http_request_json(const std::string authorization, const std::string& url, std::string& out_redirectUrl)
+json_t http_request_json(const std::string authorization, const std::string& url, std::string& out_redirectUrl, bool verbose)
 {
-    std::string result = http_request(authorization, url, "application/json;charset=UTF-8;qs=0.09", out_redirectUrl);
+    std::string result = http_request(authorization, url, "application/json;charset=UTF-8;qs=0.09", out_redirectUrl, verbose);
     if (result.empty()) { return json_t(); }
     return json_t::parse(result);
 }
 
-std::string http_request_octet(const std::string& authorization, const std::string& url, std::string& out_redirectUrl)
+std::string http_request_octet(const std::string& authorization, const std::string& url, std::string& out_redirectUrl, bool verbose)
 {
-    return http_request(authorization, url, "application/octet-stream", out_redirectUrl);
+    return http_request(authorization, url, "application/octet-stream", out_redirectUrl, verbose);
 }
 
 
-//-- *****************
-//-- *               *
-//-- * authorization *
-//-- *               *
-//-- *****************
+//--
+//-- authorization
+//--
 
 std::string onshape_apikeys_getauthorization(const std::string& access_key, const std::string& secret_key)
 {
@@ -94,11 +90,11 @@ std::string onshape_oauth_getauthorization(const std::string& client_id)
     std::string code;
     httplib::Server svr;
     svr.Get("/", [&](const httplib::Request& req, httplib::Response& res)
-        {
-            res.set_content("You can close this window or tab now.", "text/plain");
-    code = req.get_param_value("code");
-    svr.stop();
-        });
+    {
+        res.set_content("You can close this window or tab now.", "text/plain");
+        code = req.get_param_value("code");
+        svr.stop();
+    });
     svr.listen("localhost", localhostPort);
 
     if (code.empty()) { return ""; }
@@ -146,58 +142,82 @@ std::string onshape_oauth_getauthorization(const std::string& client_id)
 }
 
 
-//-- **********
-//-- *        *
-//-- * export *
-//-- *        *
-//-- **********
+//--
+//-- export stls
+//--
 
-void onshape_exportstls(const std::string& authorization, const std::string& urldocument, const std::string& units, double angleTolerance, double chordTolerance)
+std::vector<std::pair<std::string, std::string>> onshape_listsolids(const std::string& authorization, const std::string& urldocument, const std::string& units, double angleTolerance, double chordTolerance)
 {
     std::string urlbase = urldocument;
     urlbase.erase(0, std::string("https://cad.onshape.com/documents").length());
     urlbase = "https://cad.onshape.com/api/v5/parts/d" + urlbase;
-
     std::string url = urlbase + "?withThumbnails=true&includePropertyDefaults=true";
+
     std::string redirectUrl;
-    json_t parts = http_request_json(authorization, url, redirectUrl);
+    json_t parts = http_request_json(authorization, url, redirectUrl, false);
+    //printf("[%s]\n", parts.dump(true).c_str());
+    std::vector<std::pair<std::string,std::string>> solids;
     for (auto& part : parts)
     {
         if (part.at("bodyType") == "solid")
         {
             std::string name = part.at("name");
             std::string partId = part.at("partId");;
-            printf("[%s] [%s]\n", name.c_str(), partId.c_str());
-            std::string url = urlbase + "/partid/" + partId + "/stl?";
-            url+="mode="+std::string("text");
-            url+="&grouping="+std::to_string(false);
-            url+="&scale="+std::to_string(1.0);
-            url+="&units="+units; 
-            url+="&angleTolerance="+std::to_string(angleTolerance);
-            url+="&chordTolerance="+std::to_string(chordTolerance);
-            std::string redirectUrl;
-            http_request_json(authorization, url, redirectUrl);
-            if (redirectUrl.empty() == false)
-            {
-                url = redirectUrl;
-                std::string stl = http_request_octet(authorization, url, redirectUrl);
-                if (stl.empty() == false)
-                {
-                    printf("%s.stl [%zd]\n", name.c_str(), stl.length());
-                    std::ofstream outfile(name + ".stl");
-                    outfile << stl;
-                    outfile.close();
-                }
-            }
+            //printf("[%s] [%s]\n", name.c_str(), partId.c_str());
+            solids.push_back({ name, partId });
         }
     }
 
+    return solids;
 }
 
+void onshape_exportstls(const std::string& authorization, const std::string& urldocument, bool binarymode, const std::string& units, double angleTolerance, double chordTolerance)
+{
+    std::string urlbase = urldocument;
+    urlbase.erase(0, std::string("https://cad.onshape.com/documents").length());
+    urlbase = "https://cad.onshape.com/api/v5/partstudios/d" + urlbase;
+    
+    std::vector<std::pair<std::string, std::string>> solids;
+    solids=onshape_listsolids(authorization, urldocument, units, angleTolerance, chordTolerance);    
+    for (const auto& [name, partId] : solids)
+    {
+        std::string url = urlbase + "/stl?partIds=" + partId;
+        url += "&mode=" + std::string( binarymode?"binary":"text");
+        url += "&grouping=" + std::string( false?"true":"false" );
+        url += "&scale=" + std::to_string(1.0);
+        url += "&units=" + units;
+        url += "&angleTolerance=" + std::to_string(angleTolerance);
+        url += "&chordTolerance=" + std::to_string(chordTolerance);
+        
+        std::string redirectUrl;
+        http_request_json(authorization, url, redirectUrl, false);
+        if (redirectUrl.empty() == false)
+        {
+            //printf("[%s]\n", redirectUrl.c_str());
+            url = redirectUrl;
+            std::string stl = http_request_octet(authorization, url, redirectUrl, false);
+            if (stl.empty() == false)
+            {
+                printf("%s.stl [%zd]\n", name.c_str(), stl.length());
+                auto mode = std::ios_base::out;
+                if (binarymode) { mode = std::ios::binary; }
+                std::ofstream outfile(name + ".stl", mode);
+                outfile << stl;
+                outfile.close();
+            }
+        }
+    }
+}
+
+
+//--
+//-- main
+//--
 
 int main(int argc, char* argv[])
 {
     std::string urldocument = "https://cad.onshape.com/documents/bd9401ba05b5d74bf12bb1a6/w/998c0499cee6d8fc96af5cbf/e/ecd24da899ea1976c376c6e7";
+    bool binarymode = false;
     std::string units = "millimeter";
     double angleTolerance = 0.5236;
     double chordTolerance = 0.05;
@@ -211,7 +231,7 @@ int main(int argc, char* argv[])
     //std::string client_id= getenv("ONSHAPE_CLIENT_ID");
     //std::string authorization=onshape_oauth_getauthorization(client_id);
 
-    onshape_exportstls(authorization, urldocument, units, angleTolerance, chordTolerance );
+    onshape_exportstls(authorization, urldocument, binarymode, units, angleTolerance, chordTolerance );
 
     return EXIT_SUCCESS;
 }
