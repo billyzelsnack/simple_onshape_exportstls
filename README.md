@@ -1,12 +1,12 @@
 
 # Simple C++ onshape STL export
 
-A minimal implementation of an onshape STL exporter written in c++. It supports two styles of onshape authorization.
+A minimal implementation of an onshape STL exporter written in c++. It supports two options for onshape authorization.
 
 # Requirements
 * onshape account
 * Windows 10 or 11
-* Visual Studio 2022 (Others might work)
+* Visual Studio 2022 (others might work)
 
 # Onshape API keys authorization (Option A)
 * Go to https://dev-portal.onshape.com/keys
@@ -28,7 +28,7 @@ A minimal implementation of an onshape STL exporter written in c++. It supports 
 
 # Installation
 * Install https://premake.github.io/
-* Install https://github.com/microsoft/vcpkg wherever you like.
+* Install https://github.com/microsoft/vcpkg
 * vcpkg install cpp-httplib:x64-windows
 * vcpkg install cppcodec:x64-windows
 * vcpkg install curlpp:x64-windows
@@ -37,5 +37,5 @@ A minimal implementation of an onshape STL exporter written in c++. It supports 
 * In the directory where premake5.lua is located run: premake5 vs2022
 * Open vs2022/simple_onshape_exportstls.sln in Visual Studio 2022
 * Open main.cpp and in the main() choose one of the two authorization options.
-* F5 to build and run. The exported stls will be saved to out/vs2022/x64/Release
+* F5 to build and run. The exported stls will be saved to either vs2022/Debug/out_x64 or vs2022/Release/out_x64
 
