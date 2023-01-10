@@ -171,7 +171,6 @@ std::vector<std::pair<std::string, std::string>> onshape_listsolids(const std::s
     return solids;
 }
 
-
 bool onshape_export( const std::string& authorization, const std::string redirectUrl, bool binarymode, const std::string outputfilename )
 {
     //printf("[%s]\n", redirectUrl.c_str());
@@ -245,11 +244,6 @@ void onshape_exportstls_combined(const std::string& authorization, const std::st
         onshape_export(authorization, redirectUrl, true, outputfilename);
     }
 }
-
-
-
-
-
 
 
 //--
