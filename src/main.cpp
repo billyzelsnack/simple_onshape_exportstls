@@ -250,15 +250,23 @@ void onshape_exportstls_combined(const std::string& authorization, const std::st
 //-- main
 //--
 
+static std::string environmentvariable(const std::string& key)
+{
+    const char* value = getenv(key.c_str());
+    if (value == nullptr) { return ""; }
+    return value;
+}
+
+
 int main(int argc, char* argv[])
 {
     //-- API keys authorization (Option A)
-    std::string access_key=getenv("ONSHAPE_ACCESS_KEY");
-    std::string secret_key=getenv("ONSHAPE_SECRET_KEY");
+    std::string access_key= environmentvariable("ONSHAPE_ACCESS_KEY");
+    std::string secret_key= environmentvariable("ONSHAPE_SECRET_KEY");
     std::string authorization = onshape_apikeys_getauthorization(access_key, secret_key);
 
     //-- OAuth authorization (Option B)
-    //std::string client_id= getenv("ONSHAPE_CLIENT_ID");
+    //std::string client_id= environmentvariable("ONSHAPE_CLIENT_ID");
     //std::string authorization=onshape_oauth_getauthorization(client_id);
 
     std::string urldocument = "https://cad.onshape.com/documents/bd9401ba05b5d74bf12bb1a6/w/998c0499cee6d8fc96af5cbf/e/ecd24da899ea1976c376c6e7";
